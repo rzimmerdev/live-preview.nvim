@@ -58,7 +58,9 @@ M.md2html = function(md)
 	local admonition = config and config.admonition
 	local config_script = ""
 	if admonition then
-		config_script = "<script>window.livepreviewConfig = " .. vim.json.encode(admonition) .. ";</script>"
+		-- main.js reads window.livepreviewConfig.admonition, so keep the full
+		-- config object shape: { admonition = { types = { ... } } }.
+		config_script = "<script>window.livepreviewConfig = " .. vim.json.encode({ admonition = admonition }) .. ";</script>"
 	end
 	local script =
 		[[<script defer src="/live-preview.nvim/static/markdown/line-numbers.js"></script><script defer src="/live-preview.nvim/static/markdown/markdown-it-emoji.min.js"></script><script defer src='/live-preview.nvim/static/markdown/markdown-it.min.js'></script><script defer src='/live-preview.nvim/static/markdown/markdown-it-katex.js'></script><script defer src='/live-preview.nvim/static/markdown/admonition.js'></script>]]
