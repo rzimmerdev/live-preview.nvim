@@ -37,6 +37,16 @@ const isRightPath = (filepath) => {
 
 let livepreview_reload
 
+/**
+ * Send a JSON message to the Neovim server over the WebSocket.
+ * @param {Object} message
+ */
+window.livepreviewSend = (message) => {
+	if (socket && socket.readyState === WebSocket.OPEN) {
+		socket.send(JSON.stringify(message));
+	}
+};
+
 async function connectWebSocket() {
 	socket = new WebSocket(wsUrl);
 

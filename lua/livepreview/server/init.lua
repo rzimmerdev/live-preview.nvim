@@ -87,6 +87,34 @@ function M.update_message(webroot)
 	return message
 end
 
+--- Handle a WebSocket message received from a client.
+--- Currently supports following wiki links: the payload is a JSON object
+--- `{ type = "follow", link = "[[Note#^block-id]]" }`. The link is resolved
+--- by obsidian.nvim, and the preview follows the buffer change (the server
+--- pushes an update on BufEnter).
+--- @param client uv_tcp_t: client connection
+--- @param payload string: frame payload
+function M.handle_client_message(client, payload)
+	local ok, decoded = pcall(vim.json.decode, payload)
+	if not ok or type(decoded) ~= "table" or decoded.type ~= "follow" then
+		return
+	end
+	local link = decoded.link
+	if type(link) ~= "string" or link == "" then
+		return
+	end
+	vim.schedule(function()
+		local ok_obs, obsidian = pcall(require, "obsidian")
+		if not ok_obs then
+			return
+		end
+		local ok_client, obs_client = pcall(obsidian.get_client)
+		if ok_client and obs_client then
+			obs_client:follow_link_async(link)
+		end
+	end)
+end
+
 --- Drop a client from the broadcast list and close its socket
 --- @param client uv_tcp_t: client connection
 function M.forget_client(client)
@@ -248,11 +276,28 @@ function Server:start(ip, port, opts)
 					-- upgrade, and broadcasts must reach nothing else.
 					table.insert(M.connecting_clients, client)
 					-- Reads were stopped once the upgrade request was buffered,
-					-- so a closed tab would go unnoticed. Clients never send
-					-- frames upstream, so any read event means it is over.
+					-- so a closed tab would go unnoticed. Also parse any frames
+					-- the client sends upstream (e.g. wiki link follow clicks).
+					local recv_buf = ""
 					client:read_start(function(read_err, chunk)
 						if read_err or not chunk then
 							M.forget_client(client)
+							return
+						end
+						recv_buf = recv_buf .. chunk
+						while true do
+							local payload, rest, close_conn = websocket.parse_client_frame(recv_buf)
+							if rest == recv_buf then
+								break -- incomplete frame, wait for more data
+							end
+							recv_buf = rest
+							if close_conn then
+								M.forget_client(client)
+								return
+							end
+							if payload ~= nil then
+								M.handle_client_message(client, payload)
+							end
 						end
 					end)
 				end
