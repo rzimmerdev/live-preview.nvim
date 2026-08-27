@@ -22,44 +22,6 @@ md.use(markdownitKatex);
 // `window.livepreviewConfig.admonition` (injected by template.lua).
 md.use(livepreviewAdmonition, ((window.livepreviewConfig || {}).admonition) || {});
 
-// Obsidian embeds: ![[Note]], ![[Note#Heading]], ![[Note#^block-id|Alias]].
-// The target's content is fetched and rendered inline (see loadEmbeds below).
-md.inline.ruler.before('wiki_link', 'wiki_embed', (state, silent) => {
-	const start = state.pos;
-	const src = state.src;
-	if (
-		src.charCodeAt(start) !== 0x21 || // !
-		src.charCodeAt(start + 1) !== 0x5b || // [
-		src.charCodeAt(start + 2) !== 0x5b
-	) {
-		return false;
-	}
-	const end = src.indexOf(']]', start + 3);
-	if (end === -1) {
-		return false;
-	}
-	const raw = src.slice(start + 3, end);
-	if (raw === '' || raw.includes('[') || raw.includes(']')) {
-		return false;
-	}
-	if (silent) {
-		return true;
-	}
-	let target = raw;
-	const bar = raw.lastIndexOf('|');
-	if (bar !== -1) {
-		target = raw.slice(0, bar);
-	}
-	const open = state.push('wiki_embed_open', 'div', 1);
-	open.attrs = [
-		['class', 'wiki-embed'],
-		['data-embed', target.replace(/"/g, '')],
-	];
-	state.push('wiki_embed_close', 'div', -1);
-	state.pos = end + 2;
-	return true;
-});
-
 // Obsidian-style wiki links: [[Note]], [[Note|Alias]], [[Note#Heading]],
 // [[Note#^block-id|Alias]], [[#Heading]], [[#^block-id]].
 md.inline.ruler.before('link', 'wiki_link', (state, silent) => {
@@ -97,6 +59,44 @@ md.inline.ruler.before('link', 'wiki_link', (state, silent) => {
 	state.push('text', '', 0).content = label || target;
 	state.push('wiki_link_close', 'a', -1);
 
+	state.pos = end + 2;
+	return true;
+});
+
+// Obsidian embeds: ![[Note]], ![[Note#Heading]], ![[Note#^block-id|Alias]].
+// The target's content is fetched and rendered inline (see loadEmbeds below).
+md.inline.ruler.after('wiki_link', 'wiki_embed', (state, silent) => {
+	const start = state.pos;
+	const src = state.src;
+	if (
+		src.charCodeAt(start) !== 0x21 || // !
+		src.charCodeAt(start + 1) !== 0x5b || // [
+		src.charCodeAt(start + 2) !== 0x5b
+	) {
+		return false;
+	}
+	const end = src.indexOf(']]', start + 3);
+	if (end === -1) {
+		return false;
+	}
+	const raw = src.slice(start + 3, end);
+	if (raw === '' || raw.includes('[') || raw.includes(']')) {
+		return false;
+	}
+	if (silent) {
+		return true;
+	}
+	let target = raw;
+	const bar = raw.lastIndexOf('|');
+	if (bar !== -1) {
+		target = raw.slice(0, bar);
+	}
+	const open = state.push('wiki_embed_open', 'div', 1);
+	open.attrs = [
+		['class', 'wiki-embed'],
+		['data-embed', target.replace(/"/g, '')],
+	];
+	state.push('wiki_embed_close', 'div', -1);
 	state.pos = end + 2;
 	return true;
 });
