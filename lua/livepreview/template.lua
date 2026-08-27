@@ -40,6 +40,7 @@ local html_template = function(body, stylesheet, script_tag)
 				.katex .delimsizing{font-family:KaTeX_Size1,KaTeX_Size2,KaTeX_Size3,KaTeX_Size4,serif}
 				.wiki-embed{border-left:3px solid #d0d7de;padding-left:.8em;margin:.5em 0}
 				.wiki-embed-error{color:#c00}
+				.block-id{font-style:italic;color:#8b949e}
 			</style>
 ]] .. script_tag .. [[
 			<script defer src='/live-preview.nvim/static/ws-client.js'></script>

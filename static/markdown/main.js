@@ -101,6 +101,29 @@ md.inline.ruler.after('wiki_link', 'wiki_embed', (state, silent) => {
 	return true;
 });
 
+// Obsidian block IDs (`^block-id` on their own line) render as subtle
+// reference tags: italic and grey, distinct from normal text. The rule
+// terminates paragraphs and blockquotes so the tag always sits outside the
+// block it labels.
+md.block.ruler.before('paragraph', 'block_id', (state, startLine, endLine, silent) => {
+	const pos = state.bMarks[startLine] + state.tShift[startLine];
+	const line = state.src.slice(pos, state.eMarks[startLine]);
+	if (!line.match(/^\^([\w-]+)$/)) {
+		return false;
+	}
+	if (silent) {
+		return true;
+	}
+	state.line = startLine + 1;
+	const open = state.push('block_id_open', 'p', 1);
+	open.attrs = [['class', 'block-id']];
+	const inline = state.push('inline', '', 0);
+	inline.content = line;
+	inline.children = [];
+	state.push('block_id_close', 'p', -1);
+	return true;
+}, { alt: ['paragraph', 'blockquote'] });
+
 // Clicking a wiki link follows it in Neovim (via obsidian.nvim); the preview
 // then re-renders when the buffer changes.
 document.addEventListener('click', (event) => {
