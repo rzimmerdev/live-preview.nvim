@@ -63,8 +63,23 @@ function livepreviewAdmonition (md, opts = {}) {
       const known = ADMONITION_BUILTIN_TYPES.indexOf(tag) !== -1
       if (!known && !color) continue // unknown type: keep the blockquote as-is
 
-      const rest = m[2].trim()
-      const title = rest ? `${admonitionTitleCase(tag)} - ${rest}` : admonitionTitleCase(tag)
+      // Title: the marker plus everything after it on the first line. Inline
+      // rules may split the line (e.g. `$\sigma$-algebra` becomes a math
+      // token), so collect the tokens up to the first softbreak and render
+      // them as inline content.
+      const markerEnd = '[!' + m[1] + ']'
+      const titleTokens = []
+      const remainder = first.content.slice(markerEnd.length).trimStart()
+      if (remainder !== '') {
+        const t = new state.Token('text', '', 0)
+        t.content = remainder
+        titleTokens.push(t)
+      }
+      let consumed = 1
+      while (consumed < inline.children.length && inline.children[consumed].type !== 'softbreak') {
+        titleTokens.push(inline.children[consumed])
+        consumed++
+      }
 
       // blockquote -> div.admonition
       open.type = 'admonition_open'
@@ -80,9 +95,9 @@ function livepreviewAdmonition (md, opts = {}) {
       closeTok.type = 'admonition_close'
       closeTok.tag = 'div'
 
-      // Strip the marker from the first paragraph, along with the line break
-      // that follows it, so the body starts on a clean line.
-      inline.children.shift()
+      // Strip the marker and title tokens from the body, along with the line
+      // break that follows them, so the body starts on a clean line.
+      inline.children.splice(0, consumed)
       while (inline.children.length &&
              (inline.children[0].type === 'softbreak' ||
               (inline.children[0].type === 'text' && inline.children[0].content === ''))) {
@@ -101,7 +116,15 @@ function livepreviewAdmonition (md, opts = {}) {
       pOpen.attrs = [['class', 'admonition-title']]
       const tInline = new state.Token('inline', '', 0)
       tInline.children = [new state.Token('text', '', 0)]
-      tInline.children[0].content = title
+      tInline.children[0].content = admonitionTitleCase(tag)
+      if (titleTokens.length) {
+        const sep = new state.Token('text', '', 0)
+        sep.content = ' - '
+        tInline.children.push(sep)
+        for (const tk of titleTokens) {
+          tInline.children.push(tk)
+        }
+      }
       const pClose = new state.Token('paragraph_close', 'p', -1)
       state.tokens.splice(insertAt, 0, pOpen, tInline, pClose)
 
