@@ -201,7 +201,11 @@ async function loadEmbed(el) {
 	}
 	embedLoading.add(filePath);
 	try {
-		const res = await fetch('/' + encodePath(filePath));
+		let res = await fetch('/' + encodePath(filePath));
+		if (!res.ok && !/\.(md|markdown)$/i.test(filePath)) {
+			// Obsidian resolves embeds by basename: the extension is implicit.
+			res = await fetch('/' + encodePath(filePath + '.md'));
+		}
 		if (!res.ok) {
 			el.innerHTML = embedError('could not load ' + filePath);
 			return;
