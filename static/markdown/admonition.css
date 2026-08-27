@@ -1,0 +1,78 @@
+/* GFM-style alert callouts (`> [!type] Title`). */
+.admonition {
+  position: relative;
+  margin: 1.5625em 0;
+  padding: 0 1.2rem;
+  border-left: 0.4rem solid rgba(68, 138, 255, 0.8);
+  border-radius: 0.2rem;
+  background-color: rgba(255, 255, 255, 0.05);
+  overflow: auto;
+}
+
+.admonition > p {
+  margin-top: 0.8rem;
+}
+
+.admonition > .admonition-title {
+  margin: 0 -1.2rem;
+  padding: 0.8rem 1rem;
+  border-bottom: 1px solid rgba(68, 138, 255, 0.2);
+  background-color: rgba(68, 138, 255, 0.1);
+  font-weight: 700;
+}
+
+/* Built-in GFM alert types. */
+.admonition.note {
+  border-left-color: rgba(68, 138, 255, 0.8);
+}
+
+.admonition.note > .admonition-title {
+  background-color: rgba(68, 138, 255, 0.1);
+  border-bottom-color: rgba(68, 138, 255, 0.2);
+}
+
+.admonition.tip {
+  border-left-color: rgba(0, 191, 165, 0.8);
+}
+
+.admonition.tip > .admonition-title {
+  background-color: rgba(0, 191, 165, 0.1);
+  border-bottom-color: rgba(0, 191, 165, 0.2);
+}
+
+.admonition.important {
+  border-left-color: rgba(170, 0, 255, 0.8);
+}
+
+.admonition.important > .admonition-title {
+  background-color: rgba(170, 0, 255, 0.1);
+  border-bottom-color: rgba(170, 0, 255, 0.2);
+}
+
+.admonition.warning {
+  border-left-color: rgba(255, 145, 0, 0.8);
+}
+
+.admonition.warning > .admonition-title {
+  background-color: rgba(255, 145, 0, 0.1);
+  border-bottom-color: rgba(255, 145, 0, 0.2);
+}
+
+.admonition.caution {
+  border-left-color: rgba(255, 23, 68, 0.8);
+}
+
+.admonition.caution > .admonition-title {
+  background-color: rgba(255, 23, 68, 0.1);
+  border-bottom-color: rgba(255, 23, 68, 0.2);
+}
+
+/* Custom types: colors come from the inline --admonition-* variables. */
+.admonition.admonition-custom {
+  border-left-color: var(--admonition-accent);
+}
+
+.admonition.admonition-custom > .admonition-title {
+  background-color: var(--admonition-bg, rgba(68, 138, 255, 0.1));
+  border-bottom-color: var(--admonition-border, rgba(68, 138, 255, 0.2));
+}

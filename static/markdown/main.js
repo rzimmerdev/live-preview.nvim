@@ -18,6 +18,10 @@ md.use(markdownitEmoji);
 // This prevents markdown-it from corrupting LaTeX syntax before KaTeX can render it
 md.use(markdownitKatex);
 
+// GFM-style alert callouts (`> [!type] Title`), with custom types from
+// `window.livepreviewConfig.admonition` (injected by template.lua).
+md.use(livepreviewAdmonition, ((window.livepreviewConfig || {}).admonition) || {});
+
 const livepreview_render = (text) => {
 	const html = md.render(text);
 	document.querySelector('.markdown-body').innerHTML = html;

@@ -24,6 +24,10 @@ M.default = {
 	browser = "default",
 	dynamic_root = false,
 	sync_scroll = true,
+	--- Admonition (GFM alert) rendering. Custom types map a tag name to
+	--- either `{ color = '#rrggbb' }` or a plain color string.
+	--- Example: `admonition = { types = { definition = { color = '#36bf24' } } }`
+	admonition = { types = {} },
 }
 
 M.config = vim.deepcopy(M.default)

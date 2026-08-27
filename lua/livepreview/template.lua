@@ -54,9 +54,17 @@ local html_template = function(body, stylesheet, script_tag)
 end
 
 M.md2html = function(md)
+	local config = require("livepreview.config").config
+	local admonition = config and config.admonition
+	local config_script = ""
+	if admonition then
+		config_script = "<script>window.livepreviewConfig = " .. vim.json.encode(admonition) .. ";</script>"
+	end
 	local script =
-		[[<script defer src="/live-preview.nvim/static/markdown/line-numbers.js"></script><script defer src="/live-preview.nvim/static/markdown/markdown-it-emoji.min.js"></script><script defer src='/live-preview.nvim/static/markdown/markdown-it.min.js'></script><script defer src='/live-preview.nvim/static/markdown/markdown-it-katex.js'></script><script defer src='/live-preview.nvim/static/markdown/main.js'></script>]]
-	local stylesheet = [[<link rel="stylesheet" href="/live-preview.nvim/static/markdown/github-markdown.min.css">]]
+		[[<script defer src="/live-preview.nvim/static/markdown/line-numbers.js"></script><script defer src="/live-preview.nvim/static/markdown/markdown-it-emoji.min.js"></script><script defer src='/live-preview.nvim/static/markdown/markdown-it.min.js'></script><script defer src='/live-preview.nvim/static/markdown/markdown-it-katex.js'></script><script defer src='/live-preview.nvim/static/markdown/admonition.js'></script>]]
+		.. config_script
+		.. [[<script defer src='/live-preview.nvim/static/markdown/main.js'></script>]]
+	local stylesheet = [[<link rel="stylesheet" href="/live-preview.nvim/static/markdown/github-markdown.min.css"><link rel="stylesheet" href="/live-preview.nvim/static/markdown/admonition.css">]]
 	return html_template(html_escape(md), stylesheet, script)
 end
 

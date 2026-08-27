@@ -48,6 +48,15 @@ Explaination of each option:
   |fzf-lua|, |mini.pick|, |snacks.picker| or |vim.ui.select|. If nil, the plugin look for the first available picker
   when you call the `pick` command.
 - `address`: Hostname/IP-address to bind the server to. Default: `127.0.0.1`.
+- `admonition`: Rendering of GFM-style alert callouts (`> [!type] Title`).
+  Built-in types (`note`, `tip`, `important`, `warning`, `caution`) are styled
+  by default. Custom types map a tag name to a color, either as
+  `{ color = '#rrggbb' }` or as a plain color string, and get an inline
+  `--admonition-accent` variable: >
+    require('livepreview.config').set({
+        admonition = { types = { definition = { color = '#36bf24' } } },
+    })
+<
 
 Note: If you wish to config the plugin in Vimscript, see |v:lua-call| for
 instruction on how to call Lua function in Vimscript
