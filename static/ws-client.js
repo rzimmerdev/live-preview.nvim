@@ -1,5 +1,5 @@
 const wsUrl = getWebSocketUrl();
-let socket = new WebSocket(wsUrl);
+let socket;
 let connected = true;
 
 function getWebSocketUrl() {
