@@ -81,6 +81,9 @@ example >vim
 - To stop the live preview server, use the command: >vim
     :LivePreview close
 <
+- The preview follows the current buffer: entering another supported file
+  re-targets the open tab (content and URL) immediately. Starting a preview
+  while one is already open reuses the tab instead of opening a new one.
 - To open a picker and select a file to preview, use the command: >vim
     :LivePreview pick
 <

@@ -25,6 +25,25 @@ function M.is_running()
 	return not not (M.serverObj and M.serverObj.server)
 end
 
+--- Retarget the running preview to the current buffer without restarting the
+--- server: the open tab re-renders and its URL follows. No-op when the
+--- preview is not running.
+--- @return boolean true if a preview was running and a message was pushed
+function M.retarget()
+	if not M.is_running() then
+		return false
+	end
+	local msg = server.update_message(M.serverObj.webroot)
+	if msg then
+		for _, client in ipairs(server.connecting_clients) do
+			if not client:is_closing() then
+				server.websocket.send_json(client, msg)
+			end
+		end
+	end
+	return true
+end
+
 --- Start live-preview server
 ---@param filepath string: path to the file
 ---@param port number: port to run the server on
@@ -53,17 +72,11 @@ function M.start(filepath, port)
 	M.close()
 
 	M.serverObj = server.Server:new(config.config.dynamic_root and vim.fs.dirname(filepath) or nil)
-	local function onTextChanged(client)
-		local bufname = vim.api.nvim_buf_get_name(0)
-		if not utils.supported_filetype(bufname) or utils.supported_filetype(bufname) == "html" then
-			return
+	local function push_current_buffer(client)
+		local msg = server.update_message(M.serverObj.webroot)
+		if msg then
+			server.websocket.send_json(client, msg)
 		end
-		local message = {
-			filepath = bufname,
-			type = "update",
-			content = table.concat(vim.api.nvim_buf_get_lines(0, 0, -1, false), "\n"),
-		}
-		server.websocket.send_json(client, message)
 	end
 
 	M.serverObj:start(config.config.address, port, {
@@ -78,8 +91,12 @@ function M.start(filepath, port)
 				server.websocket.send_json(client, { type = "reload" })
 			end,
 		} or {
-			TextChanged = vim.schedule_wrap(onTextChanged),
-			TextChangedI = vim.schedule_wrap(onTextChanged),
+			TextChanged = vim.schedule_wrap(push_current_buffer),
+			TextChangedI = vim.schedule_wrap(push_current_buffer),
+			-- Follow the current buffer: entering a new markdown/asciidoc/svg
+			-- buffer re-targets the open tab immediately (non-preview buffers
+			-- are filtered out by update_message).
+			BufEnter = vim.schedule_wrap(push_current_buffer),
 		},
 	})
 

@@ -7,8 +7,9 @@
 local M = {}
 local handler = require("livepreview.server.handler")
 local get_plugin_path = require("livepreview.utils").get_plugin_path
+local livepreview_utils = require("livepreview.utils")
 local websocket = require("livepreview.server.websocket")
-local supported_filetype = require("livepreview.utils").supported_filetype
+local supported_filetype = livepreview_utils.supported_filetype
 local fswatch = require("livepreview.server.fswatch")
 local api = vim.api
 
@@ -59,6 +60,31 @@ local function send_scroll()
 	end
 	cursor_line = cursor[1]
 	need_scroll = false
+end
+
+--- Build an "update" message with the current buffer's content, or nil when
+--- the current buffer is not a previewable file (html updates go through the
+--- file watcher instead).
+--- The `path` field is the file relative to the webroot, used by the browser
+--- to retarget its URL when the preview follows a different buffer.
+--- @param webroot string
+--- @return table|nil
+function M.update_message(webroot)
+	local bufname = api.nvim_buf_get_name(0)
+	local ft = supported_filetype(bufname)
+	if not ft or ft == "html" then
+		return nil
+	end
+	local message = {
+		filepath = bufname,
+		type = "update",
+		content = table.concat(api.nvim_buf_get_lines(0, 0, -1, false), "\n"),
+	}
+	local path = livepreview_utils.get_relative_path(bufname, webroot)
+	if path then
+		message.path = path
+	end
+	return message
 end
 
 --- Drop a client from the broadcast list and close its socket

@@ -54,6 +54,13 @@ api.nvim_create_user_command(cmd, function(cmd_opts)
 			end
 		end
 		filepath = fs.normalize(filepath)
+		-- A preview already open for this buffer: retarget the existing tab
+		-- instead of opening a second one. Other files restart the server,
+		-- which re-opens the preview for the requested file.
+		if lp.is_running() and filepath == fs.normalize(api.nvim_buf_get_name(0)) then
+			lp.retarget()
+			return
+		end
 		if not lp.start(filepath, Config.port) then
 			return
 		end
