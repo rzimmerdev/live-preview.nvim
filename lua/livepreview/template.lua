@@ -74,7 +74,7 @@ M.md2html = function(md)
 		[[<script defer src="/live-preview.nvim/static/markdown/line-numbers.js"></script><script defer src="/live-preview.nvim/static/markdown/markdown-it-emoji.min.js"></script><script defer src='/live-preview.nvim/static/markdown/markdown-it.min.js'></script><script defer src='/live-preview.nvim/static/markdown/markdown-it-katex.js'></script><script defer src='/live-preview.nvim/static/markdown/admonition.js'></script>]]
 		.. config_script
 		.. [[<script defer src='/live-preview.nvim/static/markdown/main.js'></script>]]
-	local stylesheet = [[<link rel="stylesheet" href="/live-preview.nvim/static/markdown/github-markdown.min.css"><link rel="stylesheet" href="/live-preview.nvim/static/markdown/admonition.css">]]
+	local stylesheet = [[<link rel="stylesheet" href="/live-preview.nvim/static/markdown/github-markdown.min.css"><link rel="stylesheet" href="/live-preview.nvim/static/markdown/admonition.css"><link rel="stylesheet" href="/live-preview.nvim/static/markdown/quote.css">]]
 	return html_template(html_escape(md), stylesheet, script)
 end
 
