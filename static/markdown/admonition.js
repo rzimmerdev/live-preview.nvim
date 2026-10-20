@@ -8,11 +8,10 @@
 //
 // The title is the capitalized type name, followed by any text after the
 // tag: `> [!definition] Group Theory` renders as "Definition - Group Theory".
-// Built-in GFM types (note, tip, important, warning, caution) need no config;
-// their styling comes from admonition.css. Custom types with a color get an
-// inline `--admonition-accent` variable that admonition.css consumes.
-
-const ADMONITION_BUILTIN_TYPES = ['note', 'tip', 'important', 'warning', 'caution']
+// A trailing `-`/`+` after the tag is Obsidian's fold marker and is dropped.
+// Any type renders as a callout, as in Obsidian; the per-type colors live in
+// admonition.css (Obsidian's built-in types and aliases, plus the usual
+// mathematical ones), and the `admonition` option above overrides them.
 
 const admonitionTitleCase = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s)
 
@@ -60,19 +59,18 @@ function livepreviewAdmonition (md, opts = {}) {
 
       const tag = m[1].trim().toLowerCase()
       const color = colorOf(tag)
-      const known = ADMONITION_BUILTIN_TYPES.indexOf(tag) !== -1
-      if (!known && !color) continue // unknown type: keep the blockquote as-is
 
       // Title: the marker plus everything after it on the first line. Inline
       // rules may split the line (e.g. `$\sigma$-algebra` becomes a math
       // token), so collect the tokens up to the first softbreak and render
-      // them as inline content.
+      // them as inline content. Obsidian's fold marker (`[!type]-`) is not part
+      // of the title.
       const markerEnd = '[!' + m[1] + ']'
       const titleTokens = []
-      const remainder = first.content.slice(markerEnd.length).trimStart()
-      if (remainder !== '') {
+      const remainder = first.content.slice(markerEnd.length).replace(/^\s*[-+]/, '')
+      if (remainder.trim() !== '') {
         const t = new state.Token('text', '', 0)
-        t.content = remainder
+        t.content = remainder.trimStart()
         titleTokens.push(t)
       }
       let consumed = 1
@@ -84,7 +82,7 @@ function livepreviewAdmonition (md, opts = {}) {
       // blockquote -> div.admonition
       open.type = 'admonition_open'
       open.tag = 'div'
-      open.attrs = [['class', `admonition admonition-${tag}${color ? ' admonition-custom' : ''}`]]
+      open.attrs = [['class', `admonition admonition-${tag}`]]
       if (color) {
         const style = [`--admonition-accent: ${color}`]
         const bg = admonitionHexToRgba(color, 0.1)

@@ -1,0 +1,15 @@
+/* Blockquotes: blue accent instead of GitHub's muted grey, so a quote reads
+   as an informative block rather than de-emphasised detail.
+   The bar uses a light blue on both schemes; the text is the same hue darkened
+   enough to stay readable on a light background. */
+.markdown-body blockquote {
+  --quote-accent: #63a4ff;
+  color: #2b76c9;
+  border-left-color: var(--quote-accent);
+}
+
+@media (prefers-color-scheme: dark) {
+  .markdown-body blockquote {
+    color: #8ecbff;
+  }
+}

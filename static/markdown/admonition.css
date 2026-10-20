@@ -1,9 +1,13 @@
-/* GFM-style alert callouts (`> [!type] Title`). */
+/* GFM/Obsidian-style alert callouts (`> [!type] Title`).
+   A callout's accent is the --admonition-accent variable (with --admonition-bg
+   and --admonition-border for the title bar): the type classes below set it,
+   and the `admonition` option of the plugin config overrides it with an inline
+   style. A type with no rule here still renders, with the neutral default. */
 .admonition {
   position: relative;
   margin: 1.5625em 0;
   padding: 0 1.2rem;
-  border-left: 0.4rem solid rgba(68, 138, 255, 0.8);
+  border-left: 0.4rem solid var(--admonition-accent, rgba(68, 138, 255, 0.8));
   border-radius: 0.2rem;
   background-color: rgba(255, 255, 255, 0.05);
   overflow: auto;
@@ -16,63 +20,157 @@
 .admonition > .admonition-title {
   margin: 0 -1.2rem;
   padding: 0.8rem 1rem;
-  border-bottom: 1px solid rgba(68, 138, 255, 0.2);
-  background-color: rgba(68, 138, 255, 0.1);
+  border-bottom: 1px solid var(--admonition-border, rgba(68, 138, 255, 0.2));
+  background-color: var(--admonition-bg, rgba(68, 138, 255, 0.1));
   font-weight: 700;
 }
 
-/* Built-in GFM alert types. */
-.admonition.note {
-  border-left-color: rgba(68, 138, 255, 0.8);
+/* Obsidian's built-in types, one accent per group. */
+.admonition.note,
+.admonition.info,
+.admonition.todo {
+  --admonition-accent: #448aff;
+  --admonition-bg: rgba(68, 138, 255, 0.1);
+  --admonition-border: rgba(68, 138, 255, 0.2);
 }
 
-.admonition.note > .admonition-title {
-  background-color: rgba(68, 138, 255, 0.1);
-  border-bottom-color: rgba(68, 138, 255, 0.2);
+.admonition.abstract,
+.admonition.summary,
+.admonition.tldr {
+  --admonition-accent: #00b0ff;
+  --admonition-bg: rgba(0, 176, 255, 0.1);
+  --admonition-border: rgba(0, 176, 255, 0.2);
 }
 
-.admonition.tip {
-  border-left-color: rgba(0, 191, 165, 0.8);
-}
-
-.admonition.tip > .admonition-title {
-  background-color: rgba(0, 191, 165, 0.1);
-  border-bottom-color: rgba(0, 191, 165, 0.2);
+.admonition.tip,
+.admonition.hint {
+  --admonition-accent: #00bfa5;
+  --admonition-bg: rgba(0, 191, 165, 0.1);
+  --admonition-border: rgba(0, 191, 165, 0.2);
 }
 
 .admonition.important {
-  border-left-color: rgba(170, 0, 255, 0.8);
+  --admonition-accent: #aa00ff;
+  --admonition-bg: rgba(170, 0, 255, 0.1);
+  --admonition-border: rgba(170, 0, 255, 0.2);
 }
 
-.admonition.important > .admonition-title {
-  background-color: rgba(170, 0, 255, 0.1);
-  border-bottom-color: rgba(170, 0, 255, 0.2);
+.admonition.success,
+.admonition.check,
+.admonition.done {
+  --admonition-accent: #00c853;
+  --admonition-bg: rgba(0, 200, 83, 0.1);
+  --admonition-border: rgba(0, 200, 83, 0.2);
 }
 
-.admonition.warning {
-  border-left-color: rgba(255, 145, 0, 0.8);
+.admonition.question,
+.admonition.help,
+.admonition.faq {
+  --admonition-accent: #64dd17;
+  --admonition-bg: rgba(100, 221, 23, 0.1);
+  --admonition-border: rgba(100, 221, 23, 0.2);
 }
 
-.admonition.warning > .admonition-title {
-  background-color: rgba(255, 145, 0, 0.1);
-  border-bottom-color: rgba(255, 145, 0, 0.2);
+.admonition.warning,
+.admonition.attention {
+  --admonition-accent: #ff9100;
+  --admonition-bg: rgba(255, 145, 0, 0.1);
+  --admonition-border: rgba(255, 145, 0, 0.2);
 }
 
 .admonition.caution {
-  border-left-color: rgba(255, 23, 68, 0.8);
+  --admonition-accent: #ff1744;
+  --admonition-bg: rgba(255, 23, 68, 0.1);
+  --admonition-border: rgba(255, 23, 68, 0.2);
 }
 
-.admonition.caution > .admonition-title {
-  background-color: rgba(255, 23, 68, 0.1);
-  border-bottom-color: rgba(255, 23, 68, 0.2);
+.admonition.failure,
+.admonition.fail,
+.admonition.missing {
+  --admonition-accent: #ff5252;
+  --admonition-bg: rgba(255, 82, 82, 0.1);
+  --admonition-border: rgba(255, 82, 82, 0.2);
 }
 
-/* Custom types: colors come from the inline --admonition-* variables. */
-.admonition.admonition-custom {
-  border-left-color: var(--admonition-accent);
+.admonition.danger,
+.admonition.error {
+  --admonition-accent: #ff1744;
+  --admonition-bg: rgba(255, 23, 68, 0.1);
+  --admonition-border: rgba(255, 23, 68, 0.2);
 }
 
-.admonition.admonition-custom > .admonition-title {
-  background-color: var(--admonition-bg, rgba(68, 138, 255, 0.1));
-  border-bottom-color: var(--admonition-border, rgba(68, 138, 255, 0.2));
+.admonition.bug {
+  --admonition-accent: #f50057;
+  --admonition-bg: rgba(245, 0, 87, 0.1);
+  --admonition-border: rgba(245, 0, 87, 0.2);
+}
+
+.admonition.example {
+  --admonition-accent: #7c4dff;
+  --admonition-bg: rgba(124, 77, 255, 0.1);
+  --admonition-border: rgba(124, 77, 255, 0.2);
+}
+
+.admonition.quote,
+.admonition.cite {
+  --admonition-accent: #9e9e9e;
+  --admonition-bg: rgba(158, 158, 158, 0.1);
+  --admonition-border: rgba(158, 158, 158, 0.2);
+}
+
+/* The mathematical types used in notes; `definition` is usually configured
+   with its own color, which overrides these. */
+.admonition.theorem {
+  --admonition-accent: #8e24aa;
+  --admonition-bg: rgba(142, 36, 170, 0.1);
+  --admonition-border: rgba(142, 36, 170, 0.2);
+}
+
+.admonition.lemma {
+  --admonition-accent: #5e35b1;
+  --admonition-bg: rgba(94, 53, 177, 0.1);
+  --admonition-border: rgba(94, 53, 177, 0.2);
+}
+
+.admonition.proposition {
+  --admonition-accent: #3949ab;
+  --admonition-bg: rgba(57, 73, 171, 0.1);
+  --admonition-border: rgba(57, 73, 171, 0.2);
+}
+
+.admonition.corollary {
+  --admonition-accent: #6a1b9a;
+  --admonition-bg: rgba(106, 27, 154, 0.1);
+  --admonition-border: rgba(106, 27, 154, 0.2);
+}
+
+.admonition.definition {
+  --admonition-accent: #36bf24;
+  --admonition-bg: rgba(54, 191, 36, 0.1);
+  --admonition-border: rgba(54, 191, 36, 0.2);
+}
+
+.admonition.proof {
+  --admonition-accent: #546e7a;
+  --admonition-bg: rgba(84, 110, 122, 0.1);
+  --admonition-border: rgba(84, 110, 122, 0.2);
+}
+
+.admonition.remark {
+  --admonition-accent: #607d8b;
+  --admonition-bg: rgba(96, 125, 139, 0.1);
+  --admonition-border: rgba(96, 125, 139, 0.2);
+}
+
+.admonition.answer,
+.admonition.solution {
+  --admonition-accent: #00897b;
+  --admonition-bg: rgba(0, 137, 123, 0.1);
+  --admonition-border: rgba(0, 137, 123, 0.2);
+}
+
+.admonition.exercise {
+  --admonition-accent: #d81b60;
+  --admonition-bg: rgba(216, 27, 96, 0.1);
+  --admonition-border: rgba(216, 27, 96, 0.2);
 }

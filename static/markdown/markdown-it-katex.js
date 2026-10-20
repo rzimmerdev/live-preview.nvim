@@ -36,6 +36,11 @@
 
         if(match>=len)return false;
 
+        // A pair with nothing between the dollars (`$$` on its own) is not
+        // math: yielding an empty token would render an empty KaTeX span and
+        // leave the following LaTeX as plain text.
+        if(match===start)return false;
+
         const next=src[match+1];
         if(next&&RE_VALID_NEXT.test(next))return false;
 
@@ -77,9 +82,16 @@
         let next=start+1;
         let lastLine='';
 
+        // Look for the closing `$$`, but never leave this block: an orphan
+        // opener whose closer is missing (or sits in an enclosing quote that
+        // already ended) must not swallow the rest of the document into the
+        // math. Blank lines are allowed inside a display block; a line that
+        // still carries a `>` marker cannot be part of it.
         for(;next<end;next++){
+            if(state.isEmpty(next))continue;
             const p=state.bMarks[next]+state.tShift[next];
             const line=src.slice(p,state.eMarks[next]).trim();
+            if(line.startsWith('>'))return false;
             if(line.endsWith('$$')){
                 lastLine=line.slice(0,-2);
                 break;

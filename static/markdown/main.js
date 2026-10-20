@@ -22,6 +22,81 @@ md.use(markdownitKatex);
 // `window.livepreviewConfig.admonition` (injected by template.lua).
 md.use(livepreviewAdmonition, ((window.livepreviewConfig || {}).admonition) || {});
 
+// --- Embed targets ---------------------------------------------------------
+
+const encodePath = (path) => path.split('/').map(encodeURIComponent).join('/');
+
+const embedAttr = (value) =>
+	String(value).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+// Extensions Obsidian renders as embedded media; anything else is treated as a
+// note (or, for unknown types, as a file link).
+const MEDIA_EXTENSIONS = {
+	image: ['png', 'jpg', 'jpeg', 'jfif', 'gif', 'bmp', 'svg', 'svgz', 'webp', 'avif', 'ico', 'tif', 'tiff'],
+	video: ['mp4', 'webm', 'ogv', 'mov', 'mkv', 'avi', 'm4v'],
+	audio: ['mp3', 'wav', 'm4a', 'ogg', 'oga', 'opus', 'flac', 'aac', '3gp', 'weba'],
+	pdf: ['pdf'],
+};
+
+const mediaKindOf = (target) => {
+	const ext = (target.split('#')[0].split('.').pop() || '').toLowerCase();
+	for (const kind of Object.keys(MEDIA_EXTENSIONS)) {
+		if (MEDIA_EXTENSIONS[kind].indexOf(ext) !== -1) {
+			return kind;
+		}
+	}
+	return null;
+};
+
+// `![[target|suffix]]`: for media the suffix is a size (`300`, `300x200`), for
+// notes it is an alias.
+const parseEmbed = (raw) => {
+	const bar = raw.lastIndexOf('|');
+	const target = (bar === -1 ? raw : raw.slice(0, bar)).trim();
+	const suffix = bar === -1 ? '' : raw.slice(bar + 1).trim();
+	const kind = mediaKindOf(target);
+	const size = /^\d+(x\d+)?$/.test(suffix) ? suffix.split('x') : null;
+	return {
+		target,
+		suffix,
+		kind,
+		width: size ? Number(size[0]) : null,
+		height: size && size[1] ? Number(size[1]) : null,
+	};
+};
+
+const embedClass = (base, embed) => `${base} ${embed.kind ? 'wiki-embed-media' : 'wiki-embed-note'}`;
+
+const mediaHtml = (target, { width, height } = {}) => {
+	const src = embedAttr('/' + encodePath(target));
+	const kind = mediaKindOf(target);
+	const box = `${width ? ` width="${width}"` : ''}${height ? ` height="${height}"` : ''}`;
+	if (kind === 'image') {
+		return `<img src="${src}" alt="${embedAttr(target)}"${box}>`;
+	}
+	if (kind === 'video') {
+		return `<video src="${src}"${box} controls></video>`;
+	}
+	if (kind === 'audio') {
+		return `<audio src="${src}" controls></audio>`;
+	}
+	if (kind === 'pdf') {
+		return `<object data="${src}" type="application/pdf"${box}></object>`;
+	}
+	return `<a class="wiki-embed-file" href="${src}">${embedAttr(target)}</a>`;
+};
+
+// Media is emitted as real markup; notes are left empty for loadEmbeds below.
+const pushEmbedBody = (state, embed) => {
+	if (!embed.kind) {
+		return;
+	}
+	const html = state.push('html_inline', '', 0);
+	html.content = mediaHtml(embed.target, embed);
+};
+
+// --- Wiki links and embeds -------------------------------------------------
+
 // Obsidian-style wiki links: [[Note]], [[Note|Alias]], [[Note#Heading]],
 // [[Note#^block-id|Alias]], [[#Heading]], [[#^block-id]].
 md.inline.ruler.before('link', 'wiki_link', (state, silent) => {
@@ -39,6 +114,9 @@ md.inline.ruler.before('link', 'wiki_link', (state, silent) => {
 		return false; // empty or nested: leave as plain text
 	}
 	if (silent) {
+		// markdown-it probes rules in silent mode while looking ahead (link,
+		// emphasis) and requires the rule to advance the position.
+		state.pos = end + 2;
 		return true;
 	}
 
@@ -63,8 +141,11 @@ md.inline.ruler.before('link', 'wiki_link', (state, silent) => {
 	return true;
 });
 
-// Obsidian embeds: ![[Note]], ![[Note#Heading]], ![[Note#^block-id|Alias]].
-// The target's content is fetched and rendered inline (see loadEmbeds below).
+// Obsidian embeds: ![[Note]], ![[Note#Heading]], ![[Note#^block-id|Alias]],
+// plus embedded files (![[image.png]], ![[image.png|300]], ![[clip.mp4]]).
+// Notes are fetched and rendered inline (see loadEmbeds below); media targets
+// are emitted as their own element, since rendering a binary file as markdown
+// only produces garbage.
 md.inline.ruler.after('wiki_link', 'wiki_embed', (state, silent) => {
 	const start = state.pos;
 	const src = state.src;
@@ -83,21 +164,43 @@ md.inline.ruler.after('wiki_link', 'wiki_embed', (state, silent) => {
 	if (raw === '' || raw.includes('[') || raw.includes(']')) {
 		return false;
 	}
+	state.pos = end + 2;
 	if (silent) {
 		return true;
 	}
-	let target = raw;
-	const bar = raw.lastIndexOf('|');
-	if (bar !== -1) {
-		target = raw.slice(0, bar);
+	const embed = parseEmbed(raw);
+	const open = state.push('wiki_embed_open', 'span', 1);
+	open.attrs = [
+		['class', embedClass('wiki-embed', embed)],
+		...(embed.kind ? [] : [['data-embed', embed.target.replace(/"/g, '')]]),
+	];
+	pushEmbedBody(state, embed);
+	state.push('wiki_embed_close', 'span', -1);
+	return true;
+});
+
+// An embed alone on its line is a block: a `div` nested in the surrounding
+// `<p>` would be hoisted out of it by the HTML parser, splitting the paragraph
+// and orphaning the text that follows.
+md.block.ruler.before('paragraph', 'embed_block', (state, startLine, endLine, silent) => {
+	const pos = state.bMarks[startLine] + state.tShift[startLine];
+	const line = state.src.slice(pos, state.eMarks[startLine]).trim();
+	const m = /^!\[\[([^[\]]+)\]\]$/.exec(line);
+	if (!m) {
+		return false;
 	}
+	if (silent) {
+		return true;
+	}
+	const embed = parseEmbed(m[1]);
+	state.line = startLine + 1;
 	const open = state.push('wiki_embed_open', 'div', 1);
 	open.attrs = [
-		['class', 'wiki-embed'],
-		['data-embed', target.replace(/"/g, '')],
+		['class', embedClass('wiki-embed wiki-embed-block', embed)],
+		...(embed.kind ? [] : [['data-embed', embed.target.replace(/"/g, '')]]),
 	];
+	pushEmbedBody(state, embed);
 	state.push('wiki_embed_close', 'div', -1);
-	state.pos = end + 2;
 	return true;
 });
 
@@ -142,12 +245,35 @@ document.addEventListener('click', (event) => {
 
 const embedLoading = new Set();
 
-const encodePath = (path) => path.split('/').map(encodeURIComponent).join('/');
-
 const embedError = (msg) =>
 	'<div class="wiki-embed-error">' +
 	msg.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c])) +
 	'</div>';
+
+const isMediaContentType = (type) =>
+	/^(image|video|audio)\//.test(type) || type.indexOf('application/pdf') !== -1;
+
+/**
+ * Fetch an embed target, trying the webroot path and then the path next to the
+ * current note (Obsidian resolves links relative to the note first, then by
+ * basename anywhere in the vault - the server does the basename lookup).
+ */
+async function fetchEmbed(filePath) {
+	const encoded = encodePath(filePath);
+	const docDir = decodeURIComponent(window.location.pathname).replace(/\/[^/]*$/, '');
+	const candidates = ['/' + encoded];
+	if (docDir && docDir !== '/' && !filePath.startsWith('/')) {
+		candidates.push(docDir + '/' + encoded);
+	}
+	let res;
+	for (const url of candidates) {
+		res = await fetch(url);
+		if (res.ok) {
+			return res;
+		}
+	}
+	return res;
+}
 
 const slugify = (s) =>
 	s
@@ -224,13 +350,16 @@ async function loadEmbed(el) {
 	}
 	embedLoading.add(filePath);
 	try {
-		let res = await fetch('/' + encodePath(filePath));
-		if (!res.ok && !/\.(md|markdown)$/i.test(filePath)) {
-			// Obsidian resolves embeds by basename: the extension is implicit.
-			res = await fetch('/' + encodePath(filePath + '.md'));
-		}
+		const res = await fetchEmbed(filePath);
 		if (!res.ok) {
 			el.innerHTML = embedError('could not load ' + filePath);
+			return;
+		}
+		// `![[image]]` may resolve to a file whose extension was implied: render
+		// it as media instead of running its bytes through markdown.
+		const type = (res.headers && res.headers.get && res.headers.get('content-type')) || '';
+		if (isMediaContentType(type)) {
+			el.innerHTML = mediaHtml(filePath);
 			return;
 		}
 		const slice = extractEmbed(await res.text(), anchor);

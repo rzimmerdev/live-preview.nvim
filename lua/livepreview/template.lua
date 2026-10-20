@@ -38,7 +38,12 @@ local html_template = function(body, stylesheet, script_tag)
 				.katex .array{border-collapse:collapse}
 				.katex .array>tbody>tr>td{padding:0}
 				.katex .delimsizing{font-family:KaTeX_Size1,KaTeX_Size2,KaTeX_Size3,KaTeX_Size4,serif}
-				.wiki-embed{border-left:3px solid #d0d7de;padding-left:.8em;margin:.5em 0}
+				.wiki-embed{max-width:100%}
+				.wiki-embed-media{display:inline-block;vertical-align:middle;max-width:100%}
+				.wiki-embed-media img,.wiki-embed-media video,.wiki-embed-media object{max-width:100%}
+				.wiki-embed-note{display:inline-block;vertical-align:top;max-width:100%;border-left:3px solid #d0d7de;padding-left:.8em;margin:.5em 0}
+				.wiki-embed-block{display:block}
+				.wiki-embed-file{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.9em}
 				.wiki-embed-error{color:#c00}
 				.block-id{font-style:italic;color:#8b949e}
 			</style>

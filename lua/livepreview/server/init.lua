@@ -31,6 +31,48 @@ M.connecting_clients = {}
 local cursor_line
 local operating_system = uv.os_uname().sysname
 
+--- How long a webroot index may be reused before it is rebuilt, in seconds.
+local FILE_INDEX_TTL = 10
+
+--- Index every file under a directory by basename, keeping the shortest
+--- relative path for each name. This mirrors how Obsidian resolves links:
+--- `![[image.png]]` finds the file wherever it lives in the vault.
+--- @param root string: webroot
+--- @return table<string, string>: basename -> path relative to the webroot
+local function build_file_index(root)
+	local index = {}
+	local pending = { root }
+	while #pending > 0 do
+		local dir = table.remove(pending)
+		local scan = uv.fs_scandir(dir)
+		if scan then
+			while true do
+				local name, kind = uv.fs_scandir_next(scan)
+				if not name then
+					break
+				end
+				local full = vim.fs.joinpath(dir, name)
+				if not kind then
+					local stat = uv.fs_stat(full)
+					kind = stat and stat.type or nil
+				end
+				if kind == "directory" then
+					if name ~= ".git" and name ~= "node_modules" and name:sub(1, 1) ~= "." then
+						pending[#pending + 1] = full
+					end
+				elseif kind == "file" then
+					local relative = full:sub(#root + 2)
+					local known = index[name]
+					if not known or #relative < #known then
+						index[name] = relative
+					end
+				end
+			end
+		end
+	end
+	return index
+end
+
 ---@class ServerStartOptions
 ---@field on_events? table<string, function(client:userdata):void>
 
@@ -173,6 +215,32 @@ function Server:routes(path)
 	end
 end
 
+--- Resolve a request path to a file, falling back to a basename lookup in the
+--- webroot when the requested path does not exist. Wiki embeds address files by
+--- name (`![[image.png]]`), while the file may live in any subdirectory.
+--- @param path string: path from the http request
+--- @return string: path to the file
+function Server:resolve(path)
+	local file_path = self:routes(path)
+	if path:sub(1, #"/live-preview.nvim/") == "/live-preview.nvim/" or vim.uv.fs_stat(file_path) then
+		return file_path
+	end
+	local base = vim.fs.basename(path)
+	if base == "" or base == "." then
+		return file_path
+	end
+	local now = os.time()
+	if not self._index or now - (self._index_time or 0) > FILE_INDEX_TTL then
+		self._index = build_file_index(self.webroot)
+		self._index_time = now
+	end
+	local relative = self._index[base] or (base:match("%.") and nil or self._index[base .. ".md"])
+	if relative then
+		return vim.fs.joinpath(self.webroot, relative)
+	end
+	return file_path
+end
+
 --- Watch a directory for changes and trigger an event
 function Server:watch_dir()
 	local callback = vim.schedule_wrap(
@@ -268,7 +336,7 @@ function Server:start(ip, port, opts)
 					local path = req_info.path
 					local if_none_match = req_info.if_none_match
 					local accept = req_info.accept
-					local file_path = self:routes(path)
+					local file_path = self:resolve(path)
 					-- serve_file closes the connection once the response is sent
 					handler.serve_file(client, file_path, if_none_match, accept)
 				elseif not client:is_closing() then
